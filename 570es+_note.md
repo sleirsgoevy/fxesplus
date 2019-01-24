@@ -142,7 +142,14 @@ Result is written to `p0`.
 (some functions are extremely trivial.
 Nevertheless it doesn't cause any harm by keeping them)
 
-## f_03486
+## f\_02C04 (`num_output_print`)
+
+Prototype: `void(num*)`.
+
+Allocate 26 bytes for the number string representation (including null byte)
+Compute the x-coordinate to draw as `96-6*len`.
+
+## f\_03486
 
 (read Pd number, store to R0)
 
@@ -197,7 +204,7 @@ Nevertheless it doesn't cause any harm by keeping them)
 	pop qr8
 	pop pc
 
-## f_154F2
+## f\_154F2
 
 Copy function for number. `void(number* x, number* y)`
 `x` is at `er0`, `y` is at `er12`. (`bp`, not `er2`)
@@ -209,7 +216,7 @@ Change no register.
 		*(x+1) = *(y+1);
 
 
-## f_4E50
+## f\_04E50
 
 `strcpy`
 
@@ -218,7 +225,7 @@ When invoked to copy from input to cache (in basic overflow),
 return to 00:28FA [re 2768]; when PC = 4e66, (before 6 register
 pop's), SP = 8D9E.
 
-## f_4C30
+## f\_04C30
 
 Convert hexadecimal number in R0 to ASCII, stored in ER0.
 Used by checksum procedure.
@@ -229,17 +236,17 @@ Used by checksum procedure.
 	if (R0 >= 10) R0 += 0x37; else R0 += 0x48;
 	return ER0;
 
-## f_96EA
+## f\_096EA
 
 `strcat`
 
 Append a null-terminated string to another null-terminated string.
 
-## f_5A4E
+## f\_05A4E
 
 Convert output character to its name.
 
-## f_2b10
+## f\_02B10
 
 Write content (Bin|Oct|Dec|Hex) to screen.
 
@@ -251,11 +258,11 @@ Write content (Bin|Oct|Dec|Hex) to screen.
 	func_300C(); ; take R0, R1, ER2
 	return;
 
-## f_2e7a
+## f\_02E7A
 Write 1 line of contents (pointed to by ER2) to screen at position (x = R0, y = R1)
 If call `f_2e78` then x = 0.
 
-## f_1444C
+## f\_1444C
 
 Note: `(R4 -> R0)` is the concatenated in little-endian of R4 to R0,
 just like `XR0 = (R3 -> R0)`.
@@ -348,7 +355,7 @@ Code:
 	; R0 is 0, but there may be exceptional cases
 	return;
 
-## f_47F2
+## f\_047F2
 
 {RT} Return true if there is a key pressed.
 
@@ -356,14 +363,14 @@ Code:
 	R2 = [0F040h]     // with a delay of 2 clock cycles
 	R0 = (R2 != 0FFh) // if (R2 == 0FFh) R0 = 0; else R0 = 1;
 
-## f_46CC
+## f\_046CC
 
 Return value of bit 080F4h.7. `(void)->er0`.
 
 	if (080F4h.7 == 0) {return 0};
 	return 1;
 
-## f_312C
+## f\_0312C
 
 Copy screen buffer to hardware screen.
 
@@ -385,7 +392,7 @@ Copy screen buffer to hardware screen.
 	} while (R0 != 0);
 	POP ER0
 
-## f_07EF6
+## f\_07EF6
 
 {RT} `memcpy`. (return `dest`)
 
@@ -749,39 +756,25 @@ bool f_0B3EC (void):   ; 1-byte bool
 
 ---------------------------------------
 
-f_0B370 (near int8_t* er0 = param0, near int8_t* er2 = param1) {
-	backup er14
-	allocate 2 bytes: (fp - 2 is not used)
-		uint8_t a @ (fp - 1)
-
-	backup xr8, er4
-
-	er10 = param1
-
-	mov r0, 0
-	a = r0
-	bc al, .m1
-
-.l_012:
-	param0[2*a] = int8_t[er10]
-	param0[2*a+1] = int8_t[er10+1]
-	er10 += 16 ; real screen byte width
-	--a
-.m1:
-	l r1, [d_08117] ; probably char height
-	cmp r0, r1
-	bc lt, .l_012
-
-	pop er4
-	pop xr8
-	mov sp, er14
-	pop er14
-	rt
-}
+	// out_adr: er0, in_adr: er2. As usual for functions, only modify r0..r3.
+	f_0B370 (near int8_t* out_adr, near int8_t* in_adr) {
+		allocate 2 bytes: (fp - 2 is not used)
+			uint8_t a @ (fp - 1)
+	
+		er10 = in_adr
+		for(a = 0; a < uint8_t(*d_08117); ++a){
+			// d_08117: probably char height
+			out_adr[2*a] = int8_t[er10]
+			out_adr[2*a+1] = int8_t[er10+1]
+			er10 += 16 ; real screen byte width
+		}
+	}
 
 -----------------------
 
-f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
+; draw_char?
+
+f_02EBA (uint8_t col@r0, uint8_t row@r1, uint8_t chr@r2) {
 	push lr
 	backup r4 .. r15
 	allocate 21 bytes:
@@ -800,7 +793,7 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 		near ptr screen_pos @ er10
 
 
-	if (r0 > 95u || int8_t(r1) >= 32) goto __return;
+	if (col > 95u || int8_t(row) >= 32) goto __return;
 
 	if (int8_t [d_0811D] == 0) {
 		screen_width = 16
@@ -819,8 +812,8 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 		b2 = 2
 	}
 	if (r3 == 7 && chr < 32) {
-		++ r3  ; suspect font size = 6/7 (7/8) for small font in case of diacritics
-		-- r1
+		++ r3  ; font size = 6/7 (7/8) for small font in case of diacritics
+		-- row
 	}
 	push r3
 	mov er6, er0
@@ -851,7 +844,7 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 			mov er0, screen_pos
 			mov er2, er12
 			push r6
-			bl f_030BE
+			bl draw_byte
 			pop r0
 		} else {
 			l r0, b2
@@ -863,7 +856,7 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 			b4 = r8
 			mov er2, &b4
 			push r7
-			bl f_030BE
+			bl draw_byte
 			pop r0
 			l r0, b2
 			add r0, 1
@@ -873,7 +866,7 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 				st r8, b4
 				mov er2, &b4
 				push r6
-				bl f_030BE
+				bl draw_byte
 				pop r0
 			}
 		}
@@ -895,11 +888,10 @@ f_02EBA (uint8_t param1 @ r0, uint8_t chr @ r2) {
 	pop xr4
 	pop pc
 
-;;; --------------------------------------------------------------
-;;; Probably draw pixel on screen (in different drawing mode)
-;;; --------------------------------------------------------------
 
-void f_030BE (near uint8_t* ptr1 @ er0, near uint8_t* chr @ er2, uint8_t mask @ sp+0) {
+; f_030BE. See funcnames
+
+void draw_byte (near uint8_t* ptr1 @ er0, near uint8_t* chr @ er2, uint8_t mask @ sp+0) {
 	local uint8_t r14 @ l_char, uint8_t r15 @ l_mask
 
 	backup er14
