@@ -1,0 +1,1 @@
+1 3 cv12 = 0 3 sin 2 0 3 XX XX Int cs23 0 3 tan-1 D 0 3 cs1 cs1 , deg 1 3 Pol x10 0 3 TT TT cs10 D 0 3 3 3 3 3 cv24 M 1 3 ZZ ZZ YY YY (-) cs23 0 3 Int / 0 3 cs22 Ran# (-) / 0 3 3 3 3 3 3 3 3 3 3 3 (-) cs30 0 3 Ran# Fvar 1 3 (-) cs30 0 3 cv12 = 0 3 sin-1 , 0 3 3 3 Abs( cs17 1 3 pi 4

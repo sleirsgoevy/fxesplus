@@ -6,8 +6,8 @@ printf()        Print with format.
 ins             Log all register values to the screen.
 break_at        Set breakpoint. If input not specified, break at current address.
 unbreak_at      Delete breakpoint.
-																If input not specified, delete breakpoint at current address.
-																Have no effect if there is no breakpoint at specified position.
+			If input not specified, delete breakpoint at current address.
+			Have no effect if there is no breakpoint at specified position.
 cont()          Continue program execution.
 inject          Inject 100 bytes to the input field.
 pr_stack()      Print 48 bytes of the stack before and after SP.
@@ -39,7 +39,7 @@ function inject(str)
 		return
 	end
 
-	adr = 0x8154
+	adr = 0x81b8
 	for byte in str:gmatch '..' do
 		data[adr] = tonumber(byte, 16)
 		adr = adr + 1
@@ -67,3 +67,40 @@ function pr_stack(radius)
 	p()
 end
 
+function inject2(str)
+	emu:set_paused(true)
+	adr = 0x85ba
+	for byte in str:gmatch '..' do
+		data[adr] = tonumber(byte, 16)
+		adr = adr + 1
+	end
+	cpu.pc = 0x2768
+	cpu.sp = 0x85ba
+	emu:set_paused(false)
+end
+
+function call(addr, args)
+	io.stderr:write("[cpu] cpu reset\n");
+	emu:set_paused(true)
+	break_at(0x012345)
+	for k, v in pairs(args)
+	do cpu[k] = v
+	end
+	cpu.sp = cpu.sp - 4
+	data[cpu.sp] = 0x45
+	data[cpu.sp + 1] = 0x23
+	data[cpu.sp + 2] = 0x01
+	data[cpu.sp + 3] = 0x00
+	cpu.csr = addr >> 16
+	cpu.pc = addr & 65535
+	emu:set_paused(false)
+	return
+end
+
+function check_result()
+	if cpu.pc ~= 0x2345 or cpu.csr ~= 0x0001 then return end
+	emu:set_paused(true)
+	unbreak_at(0x012345)
+	print((cpu.r1 << 8) | cpu.r0, "("..tostring(cpu.r0)..")")
+	io.stderr:write("[cpu] cpu reset\n")
+end

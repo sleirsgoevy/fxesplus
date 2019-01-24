@@ -1,0 +1,161 @@
+start:
+getkeycode
+goto label1
+label1:
+r2 = r0
+er0 = 0x0000
+set lr
+er0 = adr_of orig_val
+[er0] = er2
+er0 = adr_of skip_spaces
+[er0] = er2
+er2 = 0x2020
+er0 = adr_of [13] str
+[er0] = er2
+er0 = adr_of [15] str
+[er0] = r2
+xr0 = adr_of addr_to_wr, adr_of [15] str
+[er0] = er2
+pop er2
+skip_spaces:
+0x0000
+division_loop:
+er0 = 0x0080
+set lr
+call 0x134a8 #er2 = r0 * r2, er0 = r0 * r2 + er4
+er0 = adr_of [-1] shr8
+[er0] = er2
+er0 = adr_of [-1] keep5
+[er0] = er2
+pop er0
+shr8:
+0x0000
+er2 = 0x0010
+set lr
+call 0x134a8
+er0 = adr_of [-1] one_shit
+[er0] = er2
+er0 = 0x0010
+call 0x134a8
+er0 = adr_of [-1] another_shit
+[er0] = er2
+pop er0
+one_shit:
+0x0000
+er2 = adr_of mod5
+er0 += er2, er8 = [er0]
+er0 = er8
+er2 = 0x0000
+r2 = r0
+er0 = adr_of add1
+[er0] = er2
+pop er0
+another_shit:
+0x0000
+er2 = adr_of mod5
+er0 += er2, er8 = [er0]
+er0 = er8
+er2 = 0x0000
+r2 = r0
+pop er0
+add1:
+0x0000
+er0 += er2
+er2 = adr_of mod5
+er0 += er2, er8 = [er0]
+er0 = er8
+er2 = 0x00ff
+call 0x134a8
+er0 = 0xffff
+r0 = r2
+pop er2
+keep5:
+0x0000
+er0 += er2
+er2 = 0x00cd
+call 0x134a8
+#r2 = division result
+er0 = 0x0000
+r0 = r2
+er2 = er0, pop er8
+0x0000
+er0 = adr_of new_value
+[er0] = er2
+er0 = 0x00f6
+pop er4
+orig_val:
+0x0000
+set lr
+call 0x134a8
+er2 = 0x0030
+er0 += er2
+er2 = er0, pop er8
+0x0000
+pop er0
+addr_to_wr:
+0x0000
+[er0] = r2
+er2 = 0xffff
+er8 = adr_of addr_to_wr
+[er8] += er2, pop xr8
+0x00000000
+pop er2
+new_value:
+0x0000
+er0 = adr_of new_value_2
+[er0] = er2
+er0 = er2, pop er8
+0x0000
+er2 = 0xffff
+er0 += er2
+er2 = 0xfffe
+er0 = max<unsigned>(er0, er2)
+er2 = er0, pop er8
+0x0000
+er0 += er2
+er2 = adr_of arr_end
+er0 += er2, er8 = [er0]
+er0 = er8
+er2 = er0, pop er8
+0x0000
+er0 = adr_of where_to_jump
+[er0] = er2
+pop er14
+where_to_jump:
+0x0000
+sp = er14, pop er14
+loop_again:
+pop er2
+new_value_2:
+0x0000
+goto division_loop
+finish:
+xr0 = adr_of str, 0x0001
+xr8 = strcpy
+xr0 = adr_of start, adr_of mlas_bak
+er12 = 0x8df0
+strcpy
+xr0 = adr_of str, 0x0001
+goto start
+label2:
+xr8 = strcpy
+xr0 = adr_of start, adr_of gky_bak
+er12 = 0x8df0
+strcpy
+goto start
+mlas_bak:
+multiline ascii
+goto label2
+$[result.pop(), result.append(0), []][2]
+gky_bak:
+getkeycode
+goto label1
+$[result.pop(), result.append(0), []][2]
+adr_of [-2] loop_again
+adr_of [-2] finish
+arr_end:
+str:
+$[result.extend(b' '*16), []][1]
+mod5:
+$[result.extend(list(range(5))*3), []][1]
+0x00

@@ -86,3 +86,10 @@ Case-insensitive.
 
 b460	{Del LR} getkeycode              # don't modify r4~>r15
 b656	{Del LR} wait for key
+
+#
+47f2	{RT} wait for ki
+b2e2	{Del LR} getkey # (~ki, ko) -> [er0]
+47ea	{RT} ko = 0
+4670	{RT} enter stop mode
+4be0	er0 = er8, pop qr8

@@ -29,23 +29,24 @@ def to_font(charcodes):
 	return ''.join(font[charcode] for charcode in charcodes)
 
 def get_npress(charcodes):
+	inf = float('inf')
 	npress=(
-	999,4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
-	100,100,100,100,100,100,100,100,100,100,100,100,100,4,  4,  4,
-	100,100,4,  4,  4,  2,  4,  4,  1,  1,  4,  1,  1,  1,  1,  100,
-	1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  4,  100,2,  100,100,
-	4,  2,  2,  2,  2,  2,  2,  100,100,100,100,100,100,100,1,  1,
-	100,100,100,100,2,  100,100,2,  2,  2,  100,100,1,  100,1,  100,
-	1,  100,100,2,  100,100,100,100,1,  2,  1,  2,  2,  2,  100,100,
-	2,  2,  2,  2,  1,  1,  2,  1,  4,  4,  4,  100,100,100,100,100,
-	100,2,  2,  100,100,3,  3,  3,  100,100,100,1,  2,  100,100,100,
-	2,  2,  2,  2,  100,100,100,100,1,  100,100,100,100,100,100,2,
-	1,  1,  1,  1,  100,100,100,100,2,  100,100,100,100,100,1,  100,
-	2,  2,  2,  2,  4,  4,  4,  4,  100,100,100,100,100,100,2,  2,
-	100,100,2,  100,4,  4,  4,  4,  100,100,100,100,100,100,100,100,
-	100,100,100,100,4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
+	inf,4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
+	inf,inf,inf,inf,inf,inf,inf,inf,inf,inf,inf,inf,inf,4,  4,  4,
+	inf,inf,4,  4,  4,  2,  4,  4,  1,  1,  4,  1,  1,  1,  1,  inf,
+	1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  4,  inf,2,  inf,inf,
+	4,  2,  2,  2,  2,  2,  2,  inf,inf,inf,inf,inf,inf,inf,1,  1,
+	inf,inf,inf,inf,2,  inf,inf,2,  2,  2,  inf,inf,1,  inf,1,  inf,
+	1,  inf,inf,2,  inf,inf,inf,inf,1,  2,  1,  2,  2,  2,  inf,inf,
+	2,  2,  2,  2,  1,  1,  2,  1,  4,  4,  4,  inf,inf,inf,inf,inf,
+	inf,2,  2,  inf,inf,3,  3,  3,  inf,inf,inf,1,  2,  inf,inf,inf,
+	2,  2,  2,  2,  inf,inf,inf,inf,1,  inf,inf,inf,inf,inf,inf,2,
+	1,  1,  1,  1,  inf,inf,inf,inf,2,  inf,inf,inf,inf,inf,1,  inf,
+	2,  2,  2,  2,  4,  4,  4,  4,  inf,inf,inf,inf,inf,inf,2,  2,
+	inf,inf,2,  inf,4,  4,  4,  4,  inf,inf,inf,inf,inf,inf,inf,inf,
+	inf,inf,inf,inf,4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
 	4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,
-	4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  100,
+	4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  inf,
 	)
 	if isinstance(charcodes, int): charcodes = (charcodes,)
 	return sum(npress[charcode] for charcode in charcodes)
@@ -68,7 +69,7 @@ def get_binary(filename):
 	result = file.read()
 	file.close()
 	return result
-rom = get_binary('/home/user202729/fxesplus/rom.bin')
+rom = get_binary('rom.bin')
 
 def get_symbols(rom):
 	symbols = [''] * 256
@@ -92,14 +93,16 @@ symbols = get_symbols(rom)
 consts = [*range(1,16)] + [rom[0x160E + i] for i in range(25)]
 convs = [*range(0xD7, 0xFF)]
 
-def to_key(byte):
+def to_key(byte, check_typeable=True):
+	if get_npress(byte) >= 100 and check_typeable:
+		return '<UNTYPEABLE%02x>'%byte
 	try:
-		return f'cs{1+consts.index(byte)}'
+		return 'cs%02d'%(1+consts.index(byte))
 	except ValueError:
 		pass
 
 	try:
-		return f'cv{1+convs.index(byte)}'
+		return 'cv%02d'%(1+convs.index(byte))
 	except ValueError:
 		pass
 

@@ -1,0 +1,212 @@
+diff -Naur emu-b/emulator/Makefile emu-a/emulator/Makefile
+--- emu-b/emulator/Makefile	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/Makefile	2019-01-15 20:19:18.513210870 +0300
+@@ -8,7 +8,7 @@
+ 
+ CXX ?= g++
+ CCEXT ?= cpp
+-CCFLAGS ?= -g -std=c++11 -Wall -Wextra -Werror -pedantic `pkg-config --cflags SDL2_image` `pkg-config --cflags sdl2` `pkg-config --cflags lua53`
++CCFLAGS ?= $(CFLAGS) -g -std=c++11 -Wall -Wextra -Werror -pedantic `pkg-config --cflags SDL2_image` `pkg-config --cflags sdl2` `pkg-config --cflags lua53`
+ CCLINK ?= -lpthread `pkg-config --libs SDL2_image` `pkg-config --libs sdl2` `pkg-config --libs lua53`
+ 
+ FILES := $(shell find $(SRCDIR) -name *.$(CCEXT))
+diff -Naur emu-b/emulator/src/Chipset/CPU.cpp emu-a/emulator/src/Chipset/CPU.cpp
+--- emu-b/emulator/src/Chipset/CPU.cpp	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/src/Chipset/CPU.cpp	2019-01-15 20:19:18.609207498 +0300
+@@ -352,14 +352,19 @@
+ 	{
+ 		if (reg_csr.raw & ~impl_csr_mask)
+ 		{
+-			logger::Info("warning: CSR masked bits set\n");
++			fprintf(stderr, "[cpu] warning: CSR masked bits set\n");
+ 			reg_csr.raw &= impl_csr_mask;
+ 		}
+ 		if (reg_pc.raw & 1)
+ 		{
+-			logger::Info("warning: PC LSB set\n");
++			fprintf(stderr, "[cpu] warning: PC LSB set\n");
+ 			reg_pc.raw &= ~1;
+ 		}
++		fprintf(stderr, "[trace] pc=%08x\n", (int)((reg_csr.raw << 16) | reg_pc.raw));
++		fprintf(stderr, "[trace] regs =");
++                for(int i = 0; i < 16; i++)
++                    fprintf(stderr, " %02x", ((unsigned int)reg_r[i]) & 255);
++                fprintf(stderr, "\n");
+ 		uint16_t opcode = emulator.chipset.mmu.ReadCode((reg_csr.raw << 16) | reg_pc.raw);
+ 		reg_pc.raw = (uint16_t)(reg_pc.raw + 2);
+ 		return opcode;
+@@ -386,7 +391,10 @@
+ 			OpcodeSource *handler = opcode_dispatch[impl_opcode];
+ 
+ 			if (!handler)
+-				PANIC("unrecognized instruction %04X at %06zX\n", impl_opcode, (((size_t)reg_csr.raw) << 16) | (reg_pc.raw - 2));
++			{
++				fprintf(stderr, "[cpu] unrecognized instruction %04X at %06zX\n", impl_opcode, (((size_t)reg_csr.raw) << 16) | (reg_pc.raw - 2));
++				continue;
++			}
+ 
+ 			impl_long_imm = 0;
+ 			if (handler->hint & H_TI)
+@@ -436,6 +444,7 @@
+ 
+ 	void CPU::Reset()
+ 	{
++		fprintf(stderr, "[cpu] cpu reset\n");
+ 		reg_sp = emulator.chipset.mmu.ReadCode(0);
+ 		reg_dsr = 0;
+ 		reg_psw = 0;
+diff -Naur emu-b/emulator/src/Chipset/CPUPushPop.cpp emu-a/emulator/src/Chipset/CPUPushPop.cpp
+--- emu-b/emulator/src/Chipset/CPUPushPop.cpp	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/src/Chipset/CPUPushPop.cpp	2019-01-15 20:19:18.609207498 +0300
+@@ -4,14 +4,17 @@
+ #include "Chipset.hpp"
+ #include "MMU.hpp"
+ 
++#include <stdio.h>
++
+ namespace casioemu
+ {
+ 	// * PUSH/POP Instructions
+ 	void CPU::OP_PUSH()
+ 	{
+ 		size_t push_size = impl_operands[1].register_size;
+-		if (push_size == 1)
++       		if (push_size == 1)
+ 			push_size = 2;
++		fprintf(stderr, "[rop] push %d to %04x at %04x\n", (int)push_size, (int)(uint16_t)reg_sp, (int)(uint16_t)reg_pc);
+ 		reg_sp -= push_size;
+ 		for (size_t ix = impl_operands[1].register_size - 1; ix != (size_t)-1; --ix)
+ 			emulator.chipset.mmu.WriteData(reg_sp + ix, impl_operands[1].value >> (8 * ix));
+@@ -42,6 +45,7 @@
+ 		size_t pop_size = impl_operands[0].register_size;
+ 		if (pop_size == 1)
+ 			pop_size = 2;
++                fprintf(stderr, "[rop] pop %d from %04x at %04x\n", (int)pop_size, (int)(uint16_t)reg_sp, (int)(uint16_t)reg_pc);
+ 		impl_operands[0].value = 0;
+ 		for (size_t ix = 0; ix != impl_operands[0].register_size; ++ix)
+ 			impl_operands[0].value |= ((uint64_t)emulator.chipset.mmu.ReadData(reg_sp + ix)) << (8 * ix);
+@@ -63,6 +67,7 @@
+ 		if (impl_operands[0].value & 2)
+ 		{
+ 			reg_pc = Pop16();
++                        fprintf(stderr, "[rop] pop pc %04x at sp=%04x\n", (int)reg_pc, (int)(reg_sp - 2));
+ 			if (memory_model == MM_LARGE)
+ 				reg_csr = Pop16() & 0x000F;
+ 		}
+diff -Naur emu-b/emulator/src/Chipset/MMU.cpp emu-a/emulator/src/Chipset/MMU.cpp
+--- emu-b/emulator/src/Chipset/MMU.cpp	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/src/Chipset/MMU.cpp	2019-01-15 20:19:18.609207498 +0300
+@@ -98,6 +98,14 @@
+ 
+ 	uint8_t MMU::ReadData(size_t offset)
+ 	{
++		uint8_t result = 0;
++		if(0)
++		{
++		return_lbl:
++			fprintf(stderr, "[ram] read byte %d at %d\n", (int)result, (int)offset);
++			return result;
++		}
++
+ 		if (offset >= (1 << 24))
+ 			PANIC("offset doesn't fit 24 bits\n");
+ 
+@@ -107,24 +115,26 @@
+ 		MMURegion **segment = segment_dispatch[segment_index];
+ 		if (!segment)
+ 		{
+-			logger::Info("read from offset %04zX of unmapped segment %02zX\n", segment_offset, segment_index);
++			logger::Info("[ram] read from offset %04zX of unmapped segment %02zX\n", segment_offset, segment_index);
+ 			emulator.HandleMemoryError();
+-			return 0;
++			goto return_lbl;
+ 		}
+ 
+ 		MMURegion *region = segment[segment_offset];
+ 		if (!region)
+ 		{
+-			logger::Info("read from unmapped offset %04zX of segment %02zX\n", segment_offset, segment_index);
++			logger::Info("[ram] read from unmapped offset %04zX of segment %02zX\n", segment_offset, segment_index);
+ 			emulator.HandleMemoryError();
+-			return 0;
++			goto return_lbl;
+ 		}
+ 
+-		return region->read(region, offset);
++		result = region->read(region, offset);
++		goto return_lbl;
+ 	}
+ 
+ 	void MMU::WriteData(size_t offset, uint8_t data)
+ 	{
++		fprintf(stderr, "[ram] write byte %d to %d\n", (int)data, (int)offset);
+ 		if (offset >= (1 << 24))
+ 			PANIC("offset doesn't fit 24 bits\n");
+ 
+@@ -134,7 +144,7 @@
+ 		MMURegion **segment = segment_dispatch[segment_index];
+ 		if (!segment)
+ 		{
+-			logger::Info("write to offset %04zX of unmapped segment %02zX (%02zX)\n", segment_offset, segment_index, data);
++			logger::Info("[ram] write to offset %04zX of unmapped segment %02zX (%02zX)\n", segment_offset, segment_index, data);
+ 			emulator.HandleMemoryError();
+ 			return;
+ 		}
+@@ -142,7 +152,7 @@
+ 		MMURegion *region = segment[segment_offset];
+ 		if (!region)
+ 		{
+-			logger::Info("write to unmapped offset %04zX of segment %02zX (%02zX)\n", segment_offset, segment_index, data);
++			logger::Info("[ram] write to unmapped offset %04zX of segment %02zX (%02zX)\n", segment_offset, segment_index, data);
+ 			emulator.HandleMemoryError();
+ 			return;
+ 		}
+diff -Naur emu-b/emulator/src/Data/ModelInfo.hpp emu-a/emulator/src/Data/ModelInfo.hpp
+--- emu-b/emulator/src/Data/ModelInfo.hpp	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/src/Data/ModelInfo.hpp	2019-01-15 20:19:18.609207498 +0300
+@@ -6,8 +6,8 @@
+ namespace casioemu
+ {
+ 	class Emulator;
+-	class SpriteInfo;
+-	class ColourInfo;
++	struct SpriteInfo;
++	struct ColourInfo;
+ 
+ 	struct ModelInfo
+ 	{
+diff -Naur emu-b/emulator/src/Emulator.hpp emu-a/emulator/src/Emulator.hpp
+--- emu-b/emulator/src/Emulator.hpp	2019-01-15 20:24:53.602021023 +0300
++++ emu-a/emulator/src/Emulator.hpp	2019-01-15 20:19:18.605207638 +0300
+@@ -91,7 +91,7 @@
+ 		ModelInfo GetModelInfo(std::string key);
+ 		std::string GetModelFilePath(std::string relative_path);
+ 
+-		friend class ModelInfo;
++		friend struct ModelInfo;
+ 		friend class CPU;
+ 		friend class MMU;
+ 	};
+diff -Naur emu-b/models/fx570esplus/model.lua emu-a/models/fx570esplus/model.lua
+--- emu-b/models/fx570esplus/model.lua	2019-01-15 20:24:53.606020887 +0300
++++ emu-a/models/fx570esplus/model.lua	2019-01-15 20:19:32.056738271 +0300
+@@ -12,14 +12,14 @@
+ 	-- Refer to https://wiki.libsdl.org/SDL_Keycode for key names.
+ 	generate(46, 544, 58, 41, 5, 4, 65, 57, {
+ 		0x02, '7', 0x12, '8', 0x22, '9', 0x32, 'Backspace', 0x42, 'Space',
+-		0x01, '4', 0x11, '5', 0x21, '6', 0x31, '' , 0x41, '/',
++		0x01, '4', 0x11, '5', 0x21, '6', 0x31, 'Keypad *' , 0x41, '/',
+ 		0x00, '1', 0x10, '2', 0x20, '3', 0x30, '=', 0x40, '-',
+-		0x64, '0', 0x63, '.', 0x62, 'E', 0x61, '' , 0x60, 'Return',
++		0x64, '0', 0x63, '.', 0x62, 'E', 0x61, 'Keypad 5' , 0x60, 'Return',
+ 	})
+ 	generate(46, 406, 48, 31, 6, 3, 54, 46, {
+-		0x05, '', 0x15, '', 0x25, '', 0x35, '', 0x45, '', 0x55, '',
+-		0x04, '', 0x14, '', 0x24, '', 0x34, '', 0x44, '', 0x54, '',
+-		0x03, '', 0x13, '', 0x23, '', 0x33, '', 0x43, '', 0x53, '',
++		0x05, 'R', 0x15, 'T', 0x25, 'Y', 0x35, 'U', 0x45, 'I', 0x55, 'O',
++		0x04, 'F', 0x14, 'G', 0x24, 'H', 0x34, 'J', 0x44, 'K', 0x54, 'L',
++		0x03, 'V', 0x13, 'B', 0x23, 'N', 0x33, 'M', 0x43, ',', 0x53, ';',
+ 	})
+ 	generate( 40, 359, 48, 31, 2, 1,  54,  0, {0x06, 'F5', 0x16, 'F6',})
+ 	generate(268, 359, 48, 31, 2, 1,  54,  0, {0x46, 'F7', 0x56, 'F8',})

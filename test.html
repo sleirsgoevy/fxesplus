@@ -1,0 +1,14 @@
+<html>
+<body>
+<script type="text/javascript" src="https://brython.info/src/brython.js"></script>
+<script type="text/python3">
+from browser import window
+
+try: import compiler
+except Exception as err: window.alert(repr(err))
+</script>
+<script>
+brython(9)
+</script>
+</body>
+</html>

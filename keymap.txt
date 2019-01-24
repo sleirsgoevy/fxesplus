@@ -1,0 +1,7 @@
+1 4 7 RCL (-) ⌟ CALC SHIFT
+2 5 8 ENG .,,, √ ∫( ALPHA
+3 6 9 ( hyp ^2 LEFT UP
++ × DEL ) sin ^( DOWN RIGHT
+- ÷ AC S<>D cos log ^-1 MODE
+   M+ tan ln log
+= Ans x10 . 0 
