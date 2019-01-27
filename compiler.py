@@ -445,8 +445,8 @@ for source_adr, home_offset in adr_of_cmds:
 	result[source_adr+1] = target_adr >> 8
 
 # debug print label location
-for label, home_offset in labels.items():
-	note(f'Label {label} is at address {home+home_offset:04X}\n')
+#for label, home_offset in labels.items():
+#	note(f'Label {label} is at address {home+home_offset:04X}\n')
 
 # scroll it around (use the most inefficient way)
 hackstring = list(map(ord,'1234567890'*10)) # but still O(n)
