@@ -1,5 +1,3 @@
-# Note: this is a fork! Original repo: https://github.com/user202729/fxesplus
-
 A bunch of tools to work with CASIO calculators.
 
 The files should be self-explanatory.

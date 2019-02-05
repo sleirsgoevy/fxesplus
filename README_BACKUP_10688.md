@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 # Note: this is a fork! Original repo: https://github.com/user202729/fxesplus
 
+More tools.
+=======
 A bunch of tools to work with CASIO calculators.
+>>>>>>> f60e6f47b829e566a6961d8e6be4b204dc045782
 
 The files should be self-explanatory.
 (either from the file name or the containing comments)
