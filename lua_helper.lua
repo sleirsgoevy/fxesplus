@@ -38,7 +38,7 @@ function inject(str)
 		print "Input at most 200 hexadecimal digits please"
 		return
 	end
-	if #str % 2 != 0 then
+	if #str % 2 ~= 0 then
 		print "Input an even number of hexadecimal digits please"
 		return
 	end
@@ -60,7 +60,7 @@ function dump_data(adr)
 		result = result .. ('%02x'):format(byte)
 		adr = adr + 1
 	until byte == 0 or #result == 200
-	print result
+	print(result)
 end
 
 

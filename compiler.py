@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 import re
 import sys
+import os
 import argparse
-
-from lib_570esp import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--target', default='overflow',
@@ -12,7 +11,19 @@ parser.add_argument('-t', '--target', default='overflow',
 parser.add_argument('-f', '--format', default='key',
 		choices=('hex', 'key'),
 		help='output format')
+parser.add_argument('-m', '--model', default='570esp',
+                help='calculator model')
 args = parser.parse_args()
+
+model_dir = os.path.join(os.path.dirname(__file__), args.model)
+
+if not os.path.isdir(model_dir):
+    sys.stderr.write(f"Model dir not found: {args.model}\n")
+    exit(1)
+
+os.chdir(model_dir)
+
+from lib_570esp import *
 
 def note(st):
 	''' Print st to stderr. Used for additional information (note, warning) '''
