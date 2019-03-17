@@ -21,7 +21,7 @@ after_y:
 #	call 0x1852c # those 3 lines set er2 to 1
 	er8 = adr_of y
 	[er8] += er2, pop xr8
-	strcpy
+	strcpy_null
 
 	# restore the stack
 	xr0 = adr_of loop, adr_of loop_bak
