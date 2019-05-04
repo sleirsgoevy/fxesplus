@@ -93,6 +93,7 @@ function inject2(str)
 		adr = adr + 1
 	end
 	cpu.pc = 0x2768
+	cpu.csr = 0
 	cpu.sp = 0x85ba
 	emu:set_paused(false)
 end
@@ -121,4 +122,10 @@ function check_result()
 	unbreak_at(0x012345)
 	print((cpu.r1 << 8) | cpu.r0, "("..tostring(cpu.r0)..")")
 	io.stderr:write("[cpu] cpu reset\n")
+end
+
+function erase_ram()
+	for i=0x8000,0x8dff do
+		data[i] = math.random(0, 255)
+	end
 end

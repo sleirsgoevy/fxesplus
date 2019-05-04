@@ -281,6 +281,10 @@ def process(line):
 			result.append(data&0xFF)
 			data>>=8
 
+	elif line.isnumeric():
+		''' Syntax: `decimal digits` '''
+		result.append(int(line) & 255)
+
 	elif line.startswith('call'):
 		''' Syntax: `call <address>` or `call <built-in>`. '''
 		try:
